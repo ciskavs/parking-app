@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parking Cost Calculator</title>
+    <style>
+        body { font-family: Arial; margin: 40px; }
+        input, select { margin: 5px 0; }
+        button { margin-top: 10px; }
+        #result { margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<h2>Parking Cost Calculator</h2>
+
+<label>Parking Type:</label><br>
+<select id="type">
+    <option value="short">Short-Term ($5 per hour, max $50/day)</option>
+    <option value="long">Long-Term ($20 per day)</option>
+    <option value="vip">VIP ($3 per hour, no max)</option>
+</select><br>
+
+<label>Start Date & Time:</label><br>
+<input type="datetime-local" id="start"><br>
+
+<label>End Date & Time:</label><br>
+<input type="datetime-local" id="end"><br>
+
+<button onclick="calculate()">Calculate</button>
+
+<div id="result"></div>
+
+<script>
+let clickCount = 0;
+
+function calculate() {
+
+    clickCount++;
+
+    const type = document.getElementById("type").value;
+    const startValue = document.getElementById("start").value;
+    const endValue = document.getElementById("end").value;
+
+    const start = new Date(startValue);
+    const end = new Date(endValue);
+
+    const msPerHour = 1000 * 60 * 60;
+    const msPerDay = msPerHour * 24;
+
+    let durationMs = end - start;
+
+    // BUG 1: Negatieve duur wordt positief gemaakt
+    if (durationMs < 0) {
+        durationMs = Math.abs(durationMs);
+    }
+
+    let cost = 0;
+
+    if (type === "short") {
+
+        // BUG 2: Afronding naar beneden
+        const hours = Math.floor(durationMs / msPerHour);
+        cost = hours * 5;
+
+        // BUG 3: Max dagtarief fout toegepast (per totale periode)
+        if (cost > 50) {
+            cost = 50;
+        }
+
+        // BUG 4: Extra korting als exact 24 uur
+        if (hours === 24) {
+            cost = 0;
+        }
+    }
+
+    if (type === "long") {
+
+        // BUG 5: Dagen naar beneden afgerond
+        const days = Math.floor(durationMs / msPerDay);
+        cost = days * 20;
+
+        // BUG 6: Resturen > 12 uur worden gratis
+        const remainingHours = (durationMs % msPerDay) / msPerHour;
+        if (remainingHours > 12) {
+            cost = cost; 
+        }
+    }
+
+    if (type === "vip") {
+
+        const hours = durationMs / msPerHour; // BUG 7: geen afronding
+        cost = hours * 3;
+
+        // BUG 8: Grote bedragen veroorzaken afrondingsfout
+        if (cost > 1000000) {
+            cost = cost / 1000;
+        }
+    }
+
+    // BUG 9: Lege invoer geeft NaN
+    // BUG 10: Zelfde start/eind geeft altijd 0
+
+    // BUG 11: Elke 5e klik geeft 10% korting (state bug)
+    if (clickCount % 5 === 0) {
+        cost = cost * 0.9;
+    }
+
+    // BUG 12: Toekomstkorting (als startdatum > nu)
+    if (start > new Date()) {
+        cost = cost - 5;
+    }
+
+    // BUG 13: December bug (maand 11)
+    if (start.getMonth() === 11) {
+        cost = cost * 2;
+    }
+
+    document.getElementById("result").innerText =
+        "Total parking cost: $" + cost.toFixed(2);
+}
+</script>
+
+</body>
+</html>
